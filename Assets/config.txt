@@ -1,2 +1,2 @@
-COM6
-COM5
+COM3
+COM4

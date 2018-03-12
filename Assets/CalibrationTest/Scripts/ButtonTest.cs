@@ -1,19 +1,24 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using System.Xml;
 using System.Xml.Serialization;
 using System.IO;
 
 public class ButtonTest : MonoBehaviour
 {
+    public Text DeviceLabel;
+    public Toggle CalibToggle;
     public GameObject prefab;
+    public int numButtons = 51;
 
     ParticleSystem[] parts;
     Renderer[] rends;
 
-    int[] buttons = new int[100];
+    List<int> buttons = new List<int>();
     int buttonInd;
+    int deviceInd;
 
     private bool Calibrating = false;
 
@@ -21,9 +26,9 @@ public class ButtonTest : MonoBehaviour
     {
         float height = Camera.main.orthographicSize / 2f;
         float width = height * Camera.main.aspect;
-        parts = new ParticleSystem[100];
-        rends = new Renderer[100];
-        for (int i = 0; i < 51; i++)
+        parts = new ParticleSystem[numButtons];
+        rends = new Renderer[numButtons];
+        for (int i = 0; i < numButtons; i++)
         {
             int y = i / 7;
             int x = i % 7;
@@ -32,104 +37,88 @@ public class ButtonTest : MonoBehaviour
             parts[i] = obj.GetComponent<ParticleSystem>();
             rends[i] = obj.GetComponent<Renderer>();
         }
-        for (int i = 0; i < 49; i++)
-        {
-            int y = i / 7;
-            int x = i % 7 + 7;
-            GameObject obj = GameObject.Instantiate(prefab);
-            obj.transform.position = new Vector3(x * 1.1f - width * 2f + 1f, -y * 1.1f + height + 1f, 0f);
-            parts[51 + i] = obj.GetComponent<ParticleSystem>();
-            rends[51 + i] = obj.GetComponent<Renderer>();
-        }
-        /*if (File.Exists(Application.dataPath + "/cal.xml"))
-        {
-            XmlSerializer serializer = new XmlSerializer(typeof(int[]));
-            using (StreamReader stream = new StreamReader(Application.dataPath + "/cal.xml"))
-            {
-                buttons = (int[])serializer.Deserialize(stream);
-                buttonInd = buttons.Length;
-            }
-        }*/
+        if (!Calibrating)
+            buttons.AddRange(SerialController.Instance.GetCalib(deviceInd));
+        DeviceLabel.text = (deviceInd + 1).ToString();
+        CalibToggle.isOn = Calibrating;
+        CalibToggle.onValueChanged.AddListener(ToggleCalib);
     }
-    
-    void Update()
+
+    public void ToggleCalib(bool value)
     {
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            buttonInd = 0;
-            if (Calibrating)
-            {
-                Debug.Log("Calibration Restarting");
-            }
-            else
-            {
-                Debug.Log("Calibration Starting");
-                Calibrating = true;
-            }
-        }
-        
+        Calibrating = value;
+
         if (Calibrating)
         {
-            for (int d = 0; d < 2; d++)
+            buttonInd = 0;
+            buttons.Clear();
+
+            for (int i = 0; i < numButtons; i++)
+                rends[i].material.color = Color.red;
+        }
+    }
+
+    public void PrevDevice()
+    {
+        deviceInd--;
+        DeviceLabel.text = (deviceInd + 1).ToString();
+    }
+
+    public void NextDevice()
+    {
+        deviceInd++;
+        DeviceLabel.text = (deviceInd + 1).ToString();
+    }
+
+    public void SaveCalib()
+    {
+        XmlSerializer serializer = new XmlSerializer(typeof(int[]));
+        using (StreamWriter stream = new StreamWriter(Application.dataPath + "/cal" + deviceInd + ".xml"))
+        {
+            serializer.Serialize(stream, buttons.ToArray());
+        }
+        SerialController.Instance.SetCalib(deviceInd, buttons.ToArray());
+    }
+
+    void Update()
+    {
+        if (Calibrating)
+        {
+            if (buttonInd < numButtons)
             {
-                for (int i = 0; i < 54; i++)
+                for (int i = 0; i < numButtons; i++)
                 {
-                    if (SerialController.Instance.WasPressed(d, i))
+                    if (SerialController.Instance.WasPressedRaw(deviceInd, i))
                     {
-                        Debug.Log(buttonInd + " " + d + " " + i);
+                        Debug.Log(buttonInd + " " + deviceInd + " " + i);
+                        while (buttons.Count <= buttonInd)
+                            buttons.Add(-1);
                         buttons[buttonInd] = i;
+                        rends[buttonInd].material.color = Color.white;
                         buttonInd++;
-                        if (buttonInd == buttons.Length)
-                        {
-                            XmlSerializer serializer = new XmlSerializer(typeof(int[]));
-                            using (StreamWriter stream = new StreamWriter(Application.dataPath + "/cal.xml"))
-                            {
-                                serializer.Serialize(stream, buttons);
-                            }
-                            Debug.Log("Calibration Done");
-                        }
                     }
                 }
             }
         }
         else
         {
-            for (int i = 0; i < 49; i++)
+            for (int i = 0; i < numButtons; i++)
             {
-                if (SerialController.Instance.IsPressed(0, i))
+                if (SerialController.Instance.IsPressed(deviceInd, i))
                 {
                     //parts[i].Emit(30);
-                    rends[i].material.color = Color.red;
+                    rends[i].material.color = Color.green;
                 }
                 else
                 {
                     rends[i].material.color = Color.white;
                 }
 
-                if (SerialController.Instance.WasPressed(0, i))
+                if (SerialController.Instance.WasPressed(deviceInd, i))
                 {
-                    Debug.Log("0 " + i);
+                    Debug.Log(deviceInd + " " + i);
                 }
             }
-            for (int i = 0; i < 51; i++)
-            {
-                if (SerialController.Instance.IsPressed(1, i))
-                {
-                    //parts[i].Emit(30);
-                    rends[i + 49].material.color = Color.red;
-                }
-                else
-                {
-                    rends[i + 49].material.color = Color.white;
-                }
-
-                if (SerialController.Instance.WasPressed(1, i))
-                {
-                    Debug.Log("1 " + i);
-                }
-            }
-
-
         }
     }
 }

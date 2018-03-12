@@ -34,14 +34,16 @@ public class SerialController : MonoBehaviour
         }
 
         XmlSerializer serializer = new XmlSerializer(typeof(int[]));
-        buttons = new int[2][];
-        using (StreamReader stream = new StreamReader(Application.dataPath + "/cal0.xml"))
+        buttons = new int[readers.Count][];
+        for (int i = 0; i < readers.Count; i++)
         {
-            buttons[0] = (int[])serializer.Deserialize(stream);
-        }
-        using (StreamReader stream = new StreamReader(Application.dataPath + "/cal1.xml"))
-        {
-            buttons[1] = (int[])serializer.Deserialize(stream);
+            if (File.Exists(Application.dataPath + "/cal" + i + ".xml"))
+            {
+                using (StreamReader stream = new StreamReader(Application.dataPath + "/cal" + i + ".xml"))
+                {
+                    buttons[i] = (int[])serializer.Deserialize(stream);
+                }
+            }
         }
     }
 
@@ -61,6 +63,44 @@ public class SerialController : MonoBehaviour
         }
     }
 
+    public int[] GetCalib(int device)
+    {
+        if (device < buttons.Length && buttons[device] != null)
+            return buttons[device];
+        else
+            return new int[0];
+    }
+
+    public void SetCalib(int device, int[] calib)
+    {
+        if (device < buttons.Length)
+            buttons[device] = calib;
+    }
+
+    public bool IsPressedRaw(int device, int button)
+    {
+        try
+        {
+            return readers[device].IsPressed(button);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public bool WasPressedRaw(int device, int button)
+    {
+        try
+        {
+            return readers[device].WasPressed(button);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public bool IsPressed(int device, int button)
     {
         try
@@ -75,11 +115,14 @@ public class SerialController : MonoBehaviour
 
     public bool WasPressed(int device, int button)
     {
-        if (button >= buttons[device].Length)
+        try
+        {
+            return readers[device].WasPressed(buttons[device][button]);
+        }
+        catch
         {
             return false;
         }
-        return readers[device].WasPressed(buttons[device][button]);
     }
 
     private void OnDestroy()
