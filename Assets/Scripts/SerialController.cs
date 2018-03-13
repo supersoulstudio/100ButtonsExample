@@ -65,7 +65,7 @@ public class SerialController : MonoBehaviour
 
     public int[] GetCalib(int device)
     {
-        if (device < buttons.Length && buttons[device] != null)
+        if (device >= 0 && device < buttons.Length && buttons[device] != null)
             return buttons[device];
         else
             return new int[0];

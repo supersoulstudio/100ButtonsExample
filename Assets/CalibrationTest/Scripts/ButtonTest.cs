@@ -20,7 +20,7 @@ public class ButtonTest : MonoBehaviour
     int buttonInd;
     int deviceInd;
 
-    private bool Calibrating = false;
+    private bool Calibrating = true;
 
     void Start()
     {
@@ -37,11 +37,9 @@ public class ButtonTest : MonoBehaviour
             parts[i] = obj.GetComponent<ParticleSystem>();
             rends[i] = obj.GetComponent<Renderer>();
         }
-        if (!Calibrating)
-            buttons.AddRange(SerialController.Instance.GetCalib(deviceInd));
-        DeviceLabel.text = (deviceInd + 1).ToString();
         CalibToggle.isOn = Calibrating;
         CalibToggle.onValueChanged.AddListener(ToggleCalib);
+        UpdateDevice();
     }
 
     public void ToggleCalib(bool value)
@@ -58,16 +56,38 @@ public class ButtonTest : MonoBehaviour
         }
     }
 
+    void UpdateDevice()
+    {
+        DeviceLabel.text = (deviceInd + 1).ToString();
+        if (Calibrating)
+        {
+            buttonInd = 0;
+            buttons.Clear();
+
+            for (int i = 0; i < numButtons; i++)
+                rends[i].material.color = Color.red;
+        }
+        else
+        {
+            buttons.Clear();
+            buttons.AddRange(SerialController.Instance.GetCalib(deviceInd));
+        }
+    }
+
     public void PrevDevice()
     {
         deviceInd--;
-        DeviceLabel.text = (deviceInd + 1).ToString();
+        if (deviceInd < 0)
+            deviceInd = 0;
+        UpdateDevice();
     }
 
     public void NextDevice()
     {
         deviceInd++;
-        DeviceLabel.text = (deviceInd + 1).ToString();
+        if (deviceInd > SerialController.Instance.readers.Count - 1)
+            deviceInd = SerialController.Instance.readers.Count - 1;
+        UpdateDevice();
     }
 
     public void SaveCalib()

@@ -5,6 +5,6 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 0
-    path: 
-    guid: 1311558f05099f443a2e525527b48f6c
+  - enabled: 1
+    path: Assets/CalibrationTest/CalibrationTest.unity
+    guid: 11ec39c61d7ca784c805cf1f07072c4d
